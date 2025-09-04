@@ -71,10 +71,10 @@ export interface NativeProps extends ViewProps {
   hasOnErrorHandler?: boolean
 
   /** Handler for messages sent from the sandbox */
-  onMessage?: CodegenTypes.BubblingEventHandler<CodegenTypes.UnsafeMixed>
+  onMessage?: CodegenTypes.BubblingEventHandler<MessageEvent>
 
   /** Handler for errors that occur in the sandbox */
-  onError?: CodegenTypes.BubblingEventHandler<CodegenTypes.UnsafeMixed>
+  onError?: CodegenTypes.BubblingEventHandler<ErrorEvent>
 }
 
 export type NativeSandboxReactNativeViewComponentType =
