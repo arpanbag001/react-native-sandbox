@@ -16,7 +16,7 @@
 
 #import <React/RCTConversions.h>
 #import <React/RCTFabricComponentsPlugins.h>
-#import <React/RCTFollyConvert.h>
+#include <folly/dynamic.h>
 #import <ReactCommon/RCTHost.h>
 
 #import "SandboxReactNativeDelegate.h"
@@ -31,6 +31,57 @@ using namespace facebook::react;
 
 @implementation SandboxReactNativeViewComponentView {
   SandboxReactNativeViewShadowNode::ConcreteState::Shared _state;
+}
+
+// Local converter to avoid dependency on RCTFollyConvert.h
+static id RNS_convertFollyDynamicToId(const folly::dynamic &dyn)
+{
+  using folly::dynamic;
+
+  if (dyn.isNull()) {
+    return [NSNull null];
+  }
+
+  if (dyn.isBool()) {
+    return @(dyn.getBool());
+  }
+
+  if (dyn.isInt()) {
+    return @(static_cast<NSInteger>(dyn.asInt()));
+  }
+
+  if (dyn.isDouble()) {
+    return @(dyn.asDouble());
+  }
+
+  if (dyn.isString()) {
+    return [NSString stringWithUTF8String:dyn.c_str()];
+  }
+
+  if (dyn.isArray()) {
+    NSMutableArray *array = [NSMutableArray arrayWithCapacity:dyn.size()];
+    for (const auto &item : dyn) {
+      id value = RNS_convertFollyDynamicToId(item);
+      [array addObject:value ?: [NSNull null]];
+    }
+    return array;
+  }
+
+  if (dyn.isObject()) {
+    NSMutableDictionary *dict = [NSMutableDictionary dictionaryWithCapacity:dyn.size()];
+    for (const auto &it : dyn.items()) {
+      const auto &keyDyn = it.first;
+      const auto &valDyn = it.second;
+      NSString *key = keyDyn.isString() ? [NSString stringWithUTF8String:keyDyn.c_str()]
+                                        : [NSString stringWithFormat:@"%s", keyDyn.asString().c_str()];
+      id value = RNS_convertFollyDynamicToId(valDyn);
+      dict[key] = value ?: [NSNull null];
+    }
+    return dict;
+  }
+
+  // Fallback: represent unsupported types as string
+  return [NSString stringWithFormat:@"%s", dyn.asString().c_str()];
 }
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
@@ -157,12 +208,12 @@ using namespace facebook::react;
   // Convert props to Objective-C types
   NSDictionary *initialProperties = @{};
   if (!props.initialProperties.isNull()) {
-    initialProperties = (NSDictionary *)convertFollyDynamicToId(props.initialProperties);
+    initialProperties = (NSDictionary *)RNS_convertFollyDynamicToId(props.initialProperties);
   }
 
   NSDictionary *launchOptions = @{};
   if (!props.launchOptions.isNull()) {
-    launchOptions = (NSDictionary *)convertFollyDynamicToId(props.launchOptions);
+    launchOptions = (NSDictionary *)RNS_convertFollyDynamicToId(props.launchOptions);
   }
 
   // Use existing delegate (properties already updated in updateProps)
