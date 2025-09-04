@@ -15,6 +15,7 @@
 #endif
 
 #import <React/RCTConversions.h>
+#import <React/RCTFollyConvert.h>
 #import <React/RCTFabricComponentsPlugins.h>
 #import <ReactCommon/RCTHost.h>
 
